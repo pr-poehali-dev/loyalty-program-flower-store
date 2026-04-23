@@ -31,7 +31,22 @@ const STORES = [
 
 type Tab = "home" | "catalog" | "orders" | "bonus" | "profile";
 
-export default function Index() {
+interface AppUser {
+  id: number;
+  phone: string;
+  name: string | null;
+  bonus_points: number;
+  level: string;
+  is_new: boolean;
+}
+
+interface IndexProps {
+  user?: AppUser;
+  token?: string;
+  onLogout?: () => void;
+}
+
+export default function Index({ user, onLogout }: IndexProps) {
   const [tab, setTab] = useState<Tab>("home");
   const [cartItems, setCartItems] = useState<number[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
@@ -42,7 +57,8 @@ export default function Index() {
     setTimeout(() => setNotification(null), 2500);
   };
 
-  const bonusPoints = 1240;
+  const displayName = user?.name || user?.phone || "Гость";
+  const bonusPoints = user?.bonus_points ?? 1240;
   const nextLevel = 2000;
   const levelName = "Серебряный";
   const nextLevelName = "Золотой";
@@ -65,11 +81,11 @@ export default function Index() {
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto pb-24">
-        {tab === "home" && <HomeTab onTabChange={setTab} />}
+        {tab === "home" && <HomeTab onTabChange={setTab} displayName={displayName} bonusPoints={bonusPoints} phone={user?.phone} />}
         {tab === "catalog" && <CatalogTab onAdd={addToCart} />}
         {tab === "orders" && <OrdersTab />}
         {tab === "bonus" && <BonusTab bonusPoints={bonusPoints} nextLevel={nextLevel} levelName={levelName} nextLevelName={nextLevelName} />}
-        {tab === "profile" && <ProfileTab onTabChange={setTab} />}
+        {tab === "profile" && <ProfileTab onTabChange={setTab} user={user} onLogout={onLogout} />}
       </main>
 
       {/* Bottom Navigation */}
@@ -104,14 +120,15 @@ export default function Index() {
   );
 }
 
-function HomeTab({ onTabChange }: { onTabChange: (t: Tab) => void }) {
+function HomeTab({ onTabChange, displayName, bonusPoints, phone }: { onTabChange: (t: Tab) => void; displayName: string; bonusPoints: number; phone?: string }) {
   return (
     <div className="px-5 pt-8 space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <p className="font-body text-muted-foreground text-sm mb-1">Добро пожаловать,</p>
-          <h1 className="font-display text-3xl font-light text-foreground">Анна Смирнова</h1>
+          <h1 className="font-display text-3xl font-light text-foreground">{displayName}</h1>
+          {phone && <p className="font-body text-xs text-muted-foreground mt-0.5">{phone}</p>}
         </div>
         <div className="relative">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-petal-200 to-bloom-200 flex items-center justify-center petal-shadow">
@@ -127,7 +144,7 @@ function HomeTab({ onTabChange }: { onTabChange: (t: Tab) => void }) {
         <div className="absolute top-0 right-0 opacity-20 animate-petal-spin" style={{ fontSize: "8rem", lineHeight: 1 }}>🌸</div>
         <p className="font-body text-rose-700 text-sm mb-1">Серебряный уровень</p>
         <div className="flex items-baseline gap-1 mb-3">
-          <span className="font-display text-4xl font-semibold text-rose-800">1 240</span>
+          <span className="font-display text-4xl font-semibold text-rose-800">{bonusPoints.toLocaleString()}</span>
           <span className="font-body text-rose-600 text-sm">бонусов</span>
         </div>
         <div className="space-y-1">
@@ -443,28 +460,30 @@ function BonusTab({ bonusPoints, nextLevel, levelName, nextLevelName }: {
   );
 }
 
-function ProfileTab({ onTabChange }: { onTabChange: (t: Tab) => void }) {
+function ProfileTab({ onTabChange, user, onLogout }: { onTabChange: (t: Tab) => void; user?: AppUser; onLogout?: () => void }) {
+  const displayName = user?.name || user?.phone || "Гость";
+  const initial = displayName.charAt(0).toUpperCase();
+
   return (
     <div className="px-5 pt-8 space-y-5">
       <div className="flex flex-col items-center gap-3 py-4">
         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-petal-200 to-bloom-300 flex items-center justify-center petal-shadow-lg">
-          <span className="font-display text-4xl text-white font-light">А</span>
+          <span className="font-display text-4xl text-white font-light">{initial}</span>
         </div>
         <div className="text-center">
-          <h1 className="font-display text-2xl font-medium text-foreground">Анна Смирнова</h1>
-          <p className="font-body text-sm text-muted-foreground mt-0.5">anna@example.com</p>
-          <p className="font-body text-sm text-muted-foreground">+7 (900) 123-45-67</p>
+          <h1 className="font-display text-2xl font-medium text-foreground">{displayName}</h1>
+          {user?.phone && <p className="font-body text-sm text-muted-foreground mt-0.5">{user.phone}</p>}
         </div>
         <div className="flex gap-2 flex-wrap justify-center">
           <Badge className="bg-gradient-to-r from-petal-300 to-bloom-300 text-white hover:from-petal-300 font-body border-0">Серебряный уровень</Badge>
-          <Badge className="bg-sage-100 text-sage-500 hover:bg-sage-100 font-body border-0">3 заказа</Badge>
+          <Badge className="bg-sage-100 text-sage-500 hover:bg-sage-100 font-body border-0">{user?.bonus_points ?? 0} бонусов</Badge>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: "Заказов", value: "3" },
-          { label: "Бонусов", value: "1 240" },
+          { label: "Бонусов", value: (user?.bonus_points ?? 0).toLocaleString() },
           { label: "Потрачено", value: "7 900 ₽" },
         ].map(({ label, value }) => (
           <div key={label} className="glass rounded-3xl p-3 text-center">
@@ -514,7 +533,7 @@ function ProfileTab({ onTabChange }: { onTabChange: (t: Tab) => void }) {
           { icon: "Package", label: "История заказов", action: () => onTabChange("orders") },
           { icon: "MapPin", label: "Адреса доставки" },
           { icon: "HelpCircle", label: "Поддержка" },
-          { icon: "LogOut", label: "Выйти", danger: true },
+          { icon: "LogOut", label: "Выйти", danger: true, action: onLogout },
         ] as { icon: string; label: string; sub?: string; danger?: boolean; action?: () => void }[]).map(({ icon, label, sub, danger, action }) => (
           <button
             key={label}
